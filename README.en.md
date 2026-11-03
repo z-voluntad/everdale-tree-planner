@@ -8,6 +8,12 @@ An independent, browser-local village planner built with React, TypeScript and V
 
 Drag 5×5 and 4×4 groves, move existing groups, undo changes and save multiple custom layouts. Two reference templates are included. All layouts share the same seven fixed resource locations on a 70×70 map with the entrance at the bottom. Editing a template creates a custom copy. English and Simplified Chinese are supported throughout the interface.
 
+## Track progress
+
+Use **Track growth** to click whole groves and mark them grown. Grown groves turn dark green with a check mark. Click again to unmark, or undo/redo. The first template edit creates a personal copy. The summary shows completed and remaining groups plus estimated tree counts.
+
+Use **Edit layout** to move, add or delete groups. Moving preserves growth; new or duplicated groups start pending. Progress stays in this browser, without an account or automatic device sync. Export/import JSON to transfer layouts and progress. SVG exports retain growth colors and check marks. Old saves start pending. Keyboard users can Tab to a grove and press Space or Enter to toggle growth.
+
 ## Development
 
 Use Node.js 24 (minimum 22.12) and pnpm 11.25.0.
@@ -24,7 +30,9 @@ The production output is `dist/`. Open the Vite server URL, not index.html direc
 
 ## Deploy
 
-Upload this directory as a GitHub repository, keeping the lockfile and excluding node_modules, dist, environment files and private saves. For GitHub Pages, select **GitHub Actions** under **Settings → Pages**, then manually run **Deploy GitHub Pages**. CI runs checks on pushes and pull requests; deployment is explicitly triggered. Relative asset paths support repository subpaths.
+Upload this directory as a GitHub repository, keeping the lockfile and excluding node_modules, dist, environment files and private saves. For GitHub Pages, select **GitHub Actions** under **Settings → Pages**. Pushes to `master` or `main` automatically run **Deploy GitHub Pages**; manual runs are also supported. Pull requests and other branches run checks only. Relative asset paths support repository subpaths. Types, tests and the production build must pass before deployment.
+
+GitHub Free supports Pages from public repositories; private repositories require an eligible paid plan. The workflow does not change repository visibility. See [GitHub Pages documentation](https://docs.github.com/en/pages/getting-started-with-github-pages). After deployment, the default URL for this repository is `https://z-voluntad.github.io/everdale-tree-planner/`.
 
 For other static hosts: Node.js 24, install `pnpm install --frozen-lockfile`, build `pnpm build`, publish `dist`. No backend, secrets or rewrite rules are needed.
 

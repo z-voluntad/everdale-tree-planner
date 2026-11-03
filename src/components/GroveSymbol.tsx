@@ -1,5 +1,6 @@
+import { memo } from 'react';
 import type { TreeGroup } from '../domain/types';
-export function GroveSymbol({
+export const GroveSymbol = memo(function GroveSymbol({
   tree,
   selected = false,
   ghost = false,
@@ -13,7 +14,7 @@ export function GroveSymbol({
   const { x, y, w } = tree;
   return (
     <g
-      className={`grove size-${w} ${selected ? 'selected' : ''} ${ghost ? 'ghost' : ''} ${invalid ? 'invalid' : ''}`}
+      className={`grove size-${w} ${tree.grown ? 'grown' : ''} ${selected ? 'selected' : ''} ${ghost ? 'ghost' : ''} ${invalid ? 'invalid' : ''}`}
       data-tree-id={ghost ? undefined : tree.id}
     >
       <rect
@@ -29,6 +30,13 @@ export function GroveSymbol({
         transform={`translate(${x + w / 2} ${y + w / 2}) scale(${w * 0.2})`}
         d="M-.82.65C-1.45-.5-.3-1.12 1-1.15 1.15.05.7 1.1-.5.8M-.95 1.05.55-.55"
       />
+      {tree.grown && (
+        <path
+          className="grove-check"
+          transform={`translate(${x + w - 1.15} ${y + 0.5}) scale(.65)`}
+          d="M0 .4.35.75 1 0"
+        />
+      )}
       {selected && (
         <>
           <rect x={x} y={y} width={w} height={w} className="selection-outline" />
@@ -51,4 +59,4 @@ export function GroveSymbol({
       )}
     </g>
   );
-}
+});

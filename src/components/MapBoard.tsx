@@ -9,12 +9,12 @@ import {
 import { BUILD_PATH, FIXED_NODES, REFERENCE_TWO } from '../data';
 import { makeTree, placementIssue } from '../domain/layout';
 import { useI18n } from '../i18n';
-import type { Plan, Point, TreeGroup, TreeSize } from '../domain/types';
+import type { Plan, PlannerMode, Point, TreeGroup, TreeSize } from '../domain/types';
 import type { MessageKey } from '../i18n/messages';
 import { GroveSymbol } from './GroveSymbol';
 type View = { x: number; y: number; size: number };
 type Gesture = {
-  mode: 'move' | 'palette' | 'place' | 'pan';
+  mode: 'move' | 'palette' | 'place' | 'pan' | 'mark';
   pointerId: number;
   start: Point;
   offset: Point;
@@ -38,9 +38,11 @@ interface Props {
   grid: boolean;
   boundary: boolean;
   reference: boolean;
+  mode: PlannerMode;
+  onToggleGrowth: (id: string) => void;
 }
 export const MapBoard = forwardRef<MapBoardHandle, Props>(function MapBoard(
-  { plan, selected, onSelect, onEdit, onMessage, grid, boundary, reference },
+  { plan, selected, onSelect, onEdit, onMessage, grid, boundary, reference, mode, onToggleGrowth },
   ref,
 ) {
   const { t } = useI18n();
@@ -62,6 +64,7 @@ export const MapBoard = forwardRef<MapBoardHandle, Props>(function MapBoard(
   const candidate = (e: { clientX: number; clientY: number }, g: Gesture): TreeGroup => {
     const p = point(e);
     return {
+      ...plan.groups.find((tree) => tree.id === g.id),
       id: g.id ?? 'preview',
       x: p.x - g.offset.x,
       y: p.y - g.offset.y,
@@ -89,6 +92,7 @@ export const MapBoard = forwardRef<MapBoardHandle, Props>(function MapBoard(
   }
   useImperativeHandle(ref, () => ({
     startPalette(e, size) {
+      if (mode !== 'layout') return;
       e.preventDefault();
       e.currentTarget.setPointerCapture(e.pointerId);
       setArmed(null);
@@ -103,6 +107,7 @@ export const MapBoard = forwardRef<MapBoardHandle, Props>(function MapBoard(
       };
     },
     arm(size) {
+      if (mode !== 'layout') return;
       setArmed(size);
       onMessage('readyPlace');
       svg.current?.focus();
@@ -114,13 +119,13 @@ export const MapBoard = forwardRef<MapBoardHandle, Props>(function MapBoard(
   }));
   useEffect(() => {
     cancel();
-  }, [plan.id]);
+  }, [plan.id, mode]);
   useEffect(() => {
     function move(e: PointerEvent) {
       const g = gesture.current;
       if (!g || g.pointerId !== e.pointerId) return;
       if (Math.hypot(e.clientX - g.start.x, e.clientY - g.start.y) > 4) g.moved = true;
-      if (g.mode === 'pan') {
+      if (g.mode === 'pan' || g.mode === 'mark') {
         const r = svg.current!.getBoundingClientRect(),
           scale = g.view.size / Math.min(r.width, r.height);
         setView({
@@ -140,6 +145,10 @@ export const MapBoard = forwardRef<MapBoardHandle, Props>(function MapBoard(
       setGhost(null);
       setMoving(null);
       if (g.mode === 'pan') return;
+      if (g.mode === 'mark') {
+        if (!g.moved && inside(e)) onToggleGrowth(g.id!);
+        return;
+      }
       if (g.mode === 'palette' && !g.moved) {
         setArmed(g.size);
         onMessage('readyPlace');
@@ -223,7 +232,7 @@ export const MapBoard = forwardRef<MapBoardHandle, Props>(function MapBoard(
     if (group && e.button === 0) {
       onSelect(group.id);
       gesture.current = {
-        mode: 'move',
+        mode: mode === 'progress' ? 'mark' : 'move',
         pointerId: e.pointerId,
         start: { x: e.clientX, y: e.clientY },
         offset: { x: p.x - group.x, y: p.y - group.y },
@@ -264,14 +273,14 @@ export const MapBoard = forwardRef<MapBoardHandle, Props>(function MapBoard(
       <svg
         ref={svg}
         viewBox={`${view.x} ${view.y} ${view.size} ${view.size}`}
-        className={`village-map ${armed ? 'placing' : ''}`}
+        className={`village-map ${armed ? 'placing' : ''} mode-${mode}`}
         tabIndex={0}
-        role="img"
-        aria-label={t('board')}
+        role="group"
+        aria-label={t(mode === 'progress' ? 'progressBoard' : 'board')}
         onPointerDown={down}
         onPointerMove={(e) => {
           const p = point(e);
-          setCursor(p);
+          setCursor((previous) => (previous?.x === p.x && previous.y === p.y ? previous : p));
           if (armed && !gesture.current)
             setGhost({
               id: 'preview',
@@ -317,7 +326,23 @@ export const MapBoard = forwardRef<MapBoardHandle, Props>(function MapBoard(
         ))}
         {grid && <rect width="70" height="70" fill="url(#major-grid)" pointerEvents="none" />}
         {plan.groups.map((g) => (
-          <g key={g.id} opacity={moving === g.id ? 0.2 : 1}>
+          <g
+            key={g.id}
+            opacity={moving === g.id ? 0.2 : 1}
+            role="button"
+            tabIndex={0}
+            aria-pressed={mode === 'progress' ? !!g.grown : selected === g.id}
+            aria-label={`${g.w}×${g.h} · X ${g.x}, Y ${g.y} · ${t(g.grown ? 'grown' : 'pending')}`}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                e.stopPropagation();
+                onSelect(g.id);
+                if (mode === 'progress') onToggleGrowth(g.id);
+              }
+            }}
+          >
+            <title>{`${g.w}×${g.h} · X ${g.x}, Y ${g.y} · ${t(g.grown ? 'grown' : 'pending')}`}</title>
             <GroveSymbol tree={g} selected={selected === g.id && moving !== g.id} />
           </g>
         ))}
@@ -364,7 +389,9 @@ export const MapBoard = forwardRef<MapBoardHandle, Props>(function MapBoard(
             ? `X ${cursor.x} · Y ${cursor.y}`
             : t('fixedMap')}
         </span>
-        <span>{ghost && issue ? t(issue) : t('moveHint')}</span>
+        <span>
+          {ghost && issue ? t(issue) : t(mode === 'progress' ? 'progressMapHint' : 'moveHint')}
+        </span>
       </div>
     </div>
   );

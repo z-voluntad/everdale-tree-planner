@@ -19,17 +19,21 @@ import {
   Undo2,
   X,
   BookOpen,
+  Sprout,
+  PencilRuler,
 } from 'lucide-react';
 import { FIXED_NODES, PRESETS, PRESET_META } from './data';
 import { useI18n } from './i18n';
 import type { MessageKey } from './i18n/messages';
 import { usePlanner } from './hooks/usePlanner';
 import { makeTree, placementIssue, treeStats } from './domain/layout';
-import type { TreeGroup, TreeSize } from './domain/types';
+import type { PlannerMode, TreeSize } from './domain/types';
+import { growthProgress, toggleGrowth } from './domain/progress';
 import { MapBoard, type MapBoardHandle } from './components/MapBoard';
 import { GroveSymbol } from './components/GroveSymbol';
 import { MiniMap } from './components/MiniMap';
 import { SourcesDialog } from './components/SourcesDialog';
+import { ProgressPanel } from './components/ProgressPanel';
 import { downloadPlan, downloadText, planSvg } from './services/export';
 export default function App() {
   const { t, locale, setLocale } = useI18n();
@@ -42,11 +46,19 @@ export default function App() {
   const [grid, setGrid] = useState(true);
   const [boundary, setBoundary] = useState(true);
   const [reference, setReference] = useState(false);
+  const [mode, setMode] = useState<PlannerMode>('progress');
   const [toast, setToast] = useState<MessageKey | null>(null);
   const current = planner.active;
   const tree = current.groups.find((g) => g.id === selected);
   const stats = treeStats(current.groups);
+  const progress = growthProgress(current.groups);
   const message = (key: MessageKey) => setToast(key);
+  function markGrowth(id: string) {
+    const group = current.groups.find((g) => g.id === id);
+    if (!group) return;
+    planner.edit(toggleGrowth(current.groups, id));
+    message(group.grown ? 'markedPending' : 'markedGrown');
+  }
   useEffect(() => {
     if (!toast) return;
     const timer = setTimeout(() => setToast(null), 2800);
@@ -108,7 +120,7 @@ export default function App() {
         return;
       }
       if (e.key === 'Escape') setPanel(null);
-      if (!tree) return;
+      if (!tree || mode !== 'layout') return;
       if (e.key === 'Delete' || e.key === 'Backspace') {
         e.preventDefault();
         remove();
@@ -244,7 +256,7 @@ export default function App() {
                         <span>
                           <strong>{planner.name(p)}</strong>
                           <small>
-                            {p.groups.length} {t('groups')}
+                            {growthProgress(p.groups).grown} / {p.groups.length} {t('groupsGrown')}
                           </small>
                         </span>
                         {current.id === p.id && <Check size={14} />}
@@ -350,39 +362,42 @@ export default function App() {
         </>
       )}
       <main className="workspace">
-        <aside className="sidebar">
-          <section className="palette-section">
-            <div className="section-label">
-              {t('treeLibrary')}
-              <span>02</span>
-            </div>
-            <div className="tree-palette">
-              {([5, 4] as TreeSize[]).map((size) => (
-                <button
-                  key={size}
-                  className={`palette-card size-${size}`}
-                  onPointerDown={(e) => board.current?.startPalette(e, size)}
-                  onClick={(e) => {
-                    if (e.detail === 0) board.current?.arm(size);
-                  }}
-                  aria-label={`${t(size === 5 ? 'large' : 'medium')} ${size}×${size}`}
-                >
-                  <span className="palette-title">
-                    {t(size === 5 ? 'large' : 'medium')}
-                    <span className="grip">⠿</span>
-                  </span>
-                  <svg viewBox={`0 0 ${size + 1} ${size + 1}`} aria-hidden="true">
-                    <GroveSymbol tree={{ id: 'icon', x: 0.5, y: 0.5, w: size, h: size }} />
-                  </svg>
-                  <strong>
-                    {size} × {size}
-                    <small>{t('tiles')}</small>
-                  </strong>
-                </button>
-              ))}
-            </div>
-            <p className="palette-hint">{t('dragHint')}</p>
-          </section>
+        <aside className={`sidebar sidebar-${mode}`}>
+          <ProgressPanel groups={current.groups} />
+          {mode === 'layout' && (
+            <section className="palette-section">
+              <div className="section-label">
+                {t('treeLibrary')}
+                <span>02</span>
+              </div>
+              <div className="tree-palette">
+                {([5, 4] as TreeSize[]).map((size) => (
+                  <button
+                    key={size}
+                    className={`palette-card size-${size}`}
+                    onPointerDown={(e) => board.current?.startPalette(e, size)}
+                    onClick={(e) => {
+                      if (e.detail === 0) board.current?.arm(size);
+                    }}
+                    aria-label={`${t(size === 5 ? 'large' : 'medium')} ${size}×${size}`}
+                  >
+                    <span className="palette-title">
+                      {t(size === 5 ? 'large' : 'medium')}
+                      <span className="grip">⠿</span>
+                    </span>
+                    <svg viewBox={`0 0 ${size + 1} ${size + 1}`} aria-hidden="true">
+                      <GroveSymbol tree={{ id: 'icon', x: 0.5, y: 0.5, w: size, h: size }} />
+                    </svg>
+                    <strong>
+                      {size} × {size}
+                      <small>{t('tiles')}</small>
+                    </strong>
+                  </button>
+                ))}
+              </div>
+              <p className="palette-hint">{t('dragHint')}</p>
+            </section>
+          )}
           <section className="selection-panel">
             <div className="section-label">{t('selected')}</div>
             {tree ? (
@@ -394,67 +409,106 @@ export default function App() {
                   </strong>
                   <span>{t(tree.w === 5 ? 'large' : tree.w === 4 ? 'medium' : 'small')}</span>
                 </div>
-                <div className="coordinate-row">
-                  <Coordinate
-                    label={t('x')}
-                    value={tree.x}
-                    max={70 - tree.w}
-                    onChange={(x) => move(x, tree.y)}
-                  />
-                  <Coordinate
-                    label={t('y')}
-                    value={tree.y}
-                    max={70 - tree.h}
-                    onChange={(y) => move(tree.x, y)}
-                  />
-                </div>
-                <div className="selection-actions">
-                  <button className="button" onClick={duplicate}>
-                    <Copy size={13} />
-                    {t('duplicate')}
-                  </button>
-                  <button className="button delete-button" onClick={remove}>
-                    <Trash2 size={13} />
-                    {t('remove')}
-                  </button>
-                </div>
+                <button
+                  className={`button growth-toggle ${tree.grown ? 'is-grown' : ''}`}
+                  aria-pressed={!!tree.grown}
+                  onClick={() => markGrowth(tree.id)}
+                >
+                  {tree.grown ? <Check size={15} /> : <Sprout size={15} />}
+                  {t(tree.grown ? 'markPending' : 'markGrown')}
+                </button>
+                {mode === 'layout' ? (
+                  <>
+                    <div className="coordinate-row">
+                      <Coordinate
+                        label={t('x')}
+                        value={tree.x}
+                        max={70 - tree.w}
+                        onChange={(x) => move(x, tree.y)}
+                      />
+                      <Coordinate
+                        label={t('y')}
+                        value={tree.y}
+                        max={70 - tree.h}
+                        onChange={(y) => move(tree.x, y)}
+                      />
+                    </div>
+                    <div className="selection-actions">
+                      <button className="button" onClick={duplicate}>
+                        <Copy size={13} />
+                        {t('duplicate')}
+                      </button>
+                      <button className="button delete-button" onClick={remove}>
+                        <Trash2 size={13} />
+                        {t('remove')}
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <p className="selected-position">
+                    X {tree.x} · Y {tree.y}
+                  </p>
+                )}
               </>
             ) : (
               <div className="selection-empty">
                 <MoveUpRight size={24} />
                 <p>
                   {t('selectHint')}
-                  <small>{t('selectSub')}</small>
+                  <small>{t(mode === 'progress' ? 'progressSelectSub' : 'selectSub')}</small>
                 </p>
               </div>
             )}
           </section>
-          <section className={`budget ${stats.units > 450 ? 'over' : ''}`}>
-            <div className="budget-heading">
-              <span>{t('units')}</span>
+          {mode === 'progress' && (
+            <section className="growth-estimate">
+              <div className="section-label">{t('estimatedProgress')}</div>
               <strong>
-                {stats.units}
-                <small> / 450</small>
+                {progress.grownUnits}
+                <small> / {progress.totalUnits}</small>
               </strong>
-            </div>
-            <div className="budget-track">
-              <i style={{ width: `${Math.min(100, (stats.units / 450) * 100)}%` }} />
-            </div>
-            <div className="budget-meta">
-              <span>
-                {stats.count} {t('groups')}
-              </span>
-              <span>
-                {stats.area} {t('tiles')}
-              </span>
-            </div>
-            {stats.units > 450 && (
-              <p className="over-note">
-                {t('over')} +{stats.units - 450}
+              <p>
+                {t('remaining')} {progress.remainingUnits} {t('estimatedTrees')}
               </p>
-            )}
-            <p className="count-note">{t('countNote')}</p>
-          </section>
+              <p className="count-note">{t('countNote')}</p>
+              <button
+                className="button"
+                onClick={() => downloadPlan(current, planner.name(current))}
+              >
+                <ArrowDownToLine size={14} />
+                {t('backupProgress')}
+              </button>
+              <p className="growth-note">{t('progressLocal')}</p>
+            </section>
+          )}
+          {mode === 'layout' && (
+            <section className={`budget ${stats.units > 450 ? 'over' : ''}`}>
+              <div className="budget-heading">
+                <span>{t('units')}</span>
+                <strong>
+                  {stats.units}
+                  <small> / 450</small>
+                </strong>
+              </div>
+              <div className="budget-track">
+                <i style={{ width: `${Math.min(100, (stats.units / 450) * 100)}%` }} />
+              </div>
+              <div className="budget-meta">
+                <span>
+                  {stats.count} {t('groups')}
+                </span>
+                <span>
+                  {stats.area} {t('tiles')}
+                </span>
+              </div>
+              {stats.units > 450 && (
+                <p className="over-note">
+                  {t('over')} +{stats.units - 450}
+                </p>
+              )}
+              <p className="count-note">{t('countNote')}</p>
+            </section>
+          )}
           <div className="sidebar-bottom">
             <button className="text-button" onClick={() => setSources(true)}>
               <BookOpen size={14} />
@@ -530,6 +584,27 @@ export default function App() {
               </button>
             </div>
           </div>
+          <div className="mode-toolbar">
+            <div className="mode-switch" role="group" aria-label={t('mode')}>
+              <button
+                className={mode === 'progress' ? 'active' : ''}
+                aria-pressed={mode === 'progress'}
+                onClick={() => setMode('progress')}
+              >
+                <Sprout size={15} />
+                {t('progressMode')}
+              </button>
+              <button
+                className={mode === 'layout' ? 'active' : ''}
+                aria-pressed={mode === 'layout'}
+                onClick={() => setMode('layout')}
+              >
+                <PencilRuler size={15} />
+                {t('layoutMode')}
+              </button>
+            </div>
+            <span>{t(mode === 'progress' ? 'progressModeHint' : 'layoutModeHint')}</span>
+          </div>
           <MapBoard
             ref={board}
             plan={current}
@@ -540,6 +615,8 @@ export default function App() {
             grid={grid}
             boundary={boundary}
             reference={reference}
+            mode={mode}
+            onToggleGrowth={markGrowth}
           />
         </section>
       </main>

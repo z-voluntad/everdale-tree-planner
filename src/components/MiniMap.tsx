@@ -12,7 +12,7 @@ export function MiniMap({ plan }: { plan: Plan }) {
           width={g.w - 0.4}
           height={g.h - 0.4}
           rx=".5"
-          fill={g.w === 5 ? '#a9bb8d' : '#86a898'}
+          fill={g.grown ? '#365d42' : g.w === 5 ? '#d9e5c8' : '#cfdfd3'}
         />
       ))}
       {FIXED_NODES.map((n) => (

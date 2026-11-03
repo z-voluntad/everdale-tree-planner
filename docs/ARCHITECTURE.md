@@ -9,6 +9,7 @@ src/
   hooks/usePlanner.ts      Custom plans, template copying, undo/redo, save state
   domain/types.ts          Shared typed contracts
   domain/layout.ts         Pure geometry, counts, validation, portable schema
+  domain/progress.ts       Pure growth toggling and per-layout progress totals
   services/storage.ts     Versioned localStorage codec and legacy migration
   services/export.ts      Safe JSON / standalone SVG export
   data/                    Fixed resources, templates and derived map mask
@@ -36,6 +37,10 @@ The browser is the only persistence layer. There are no credentials, remote save
 Add a complete `Record<MessageKey,string>` dictionary, extend the locale union and provider selector. The current language persists separately from layouts. Automatically generated names are editable; user-authored names are not translated when the language changes.
 
 ## JSON contract
+
+Each tree group has an optional boolean `grown`. Missing means pending, preserving the version-1 and legacy JSON contracts. The parser rejects non-boolean flags. Growth edits share the plan's copy-on-edit behavior and undo/redo history. Moving preserves growth; newly placed or duplicated groups start pending. JSON, SVG and mini previews retain growth. Progress is per whole grove; tree counts are estimates, while percentage is based on completed groups.
+
+The default progress mode interprets a click as a growth toggle and a drag as map panning. Layout mode enables geometry editing. Keyboard activation works on each grove. Memoized grove symbols and grid-cell cursor comparison avoid redrawing unchanged symbols on every pointer event.
 
 Exports contain `format`, `version`, `N`, `id`, `name`, `groups`, `cells`, optional `reference` and `updatedAt`. Legacy `treeGroups` is accepted. Fixed-node records are not part of editable data. Inputs are validated before touching the library. JSON up to 2 MB is accepted through the UI.
 

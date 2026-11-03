@@ -50,10 +50,18 @@ export function validateGroups(value: unknown, fixed: FixedNode[]): TreeGroup[] 
       g.id.length > 120 ||
       ![2, 4, 5].includes(g.w) ||
       g.h !== g.w ||
+      (g.grown !== undefined && typeof g.grown !== 'boolean') ||
       result.some((t) => t.id === g.id)
     )
       throw new Error('invalid');
-    const clean = { id: g.id, x: g.x, y: g.y, w: g.w, h: g.h };
+    const clean = {
+      id: g.id,
+      x: g.x,
+      y: g.y,
+      w: g.w,
+      h: g.h,
+      ...(g.grown !== undefined ? { grown: g.grown } : {}),
+    };
     if (placementIssue(clean, result, fixed)) throw new Error('invalid');
     result.push(clean);
   }
