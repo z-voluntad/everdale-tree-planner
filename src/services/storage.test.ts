@@ -211,4 +211,33 @@ describe('safe library persistence', () => {
     expect(storage.getItem(STORAGE_KEY)).toBe(raw);
     expect(storage.getItem(BACKUP_KEY)).toBeNull();
   });
+  it('offers recovery when the primary is missing but a valid backup remains', async () => {
+    const backup = JSON.stringify(library());
+    const storage = memory({ [BACKUP_KEY]: backup });
+    const session = new LibraryStorage(() => storage, lock());
+    expect(session.status).toMatchObject({
+      issue: 'corrupt',
+      needsRecovery: true,
+      recoveredFromBackup: true,
+      library: library(),
+    });
+    await session.save(library('New'));
+    expect(storage.getItem(STORAGE_KEY)).toBeNull();
+    expect(storage.getItem(BACKUP_KEY)).toBe(backup);
+    expect((await session.save(library('Recovered'), true)).issue).toBeNull();
+    const archive = [...storage.data].find(([key]) => key.startsWith(RECOVERY_PREFIX))!;
+    expect(JSON.parse(archive[1])).toMatchObject({ current: null, backup });
+  });
+
+  it('archives unreadable backup bytes too before replacing either copy', async () => {
+    const storage = memory({ [STORAGE_KEY]: '{broken main', [BACKUP_KEY]: '{broken backup' });
+    const session = new LibraryStorage(() => storage, lock());
+    expect(session.status.original?.backup).toBe('{broken backup');
+    expect((await session.save(library(), true)).issue).toBeNull();
+    const archive = [...storage.data].find(([key]) => key.startsWith(RECOVERY_PREFIX))!;
+    expect(JSON.parse(archive[1])).toMatchObject({
+      current: '{broken main',
+      backup: '{broken backup',
+    });
+  });
 });

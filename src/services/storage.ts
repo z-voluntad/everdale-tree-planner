@@ -9,7 +9,7 @@ export const RECOVERY_PREFIX = `${STORAGE_KEY}.recovery.`;
 export const LIBRARY_FORMAT = 'everdale-planner-library';
 
 type StorageAccess = Pick<Storage, 'getItem' | 'setItem'>;
-type StoredSnapshot = { current: string | null; legacy: string | null };
+type StoredSnapshot = { current: string | null; legacy: string | null; backup?: string | null };
 export type StorageIssue = 'corrupt' | 'conflict' | 'unavailable' | 'write' | 'unsupported';
 export type ExclusiveLock = <T>(task: () => T) => Promise<T>;
 export interface StorageState {
@@ -120,6 +120,12 @@ export class LibraryStorage {
       return this.status;
     }
     try {
+      if (
+        this.state.original.current === null &&
+        this.state.original.legacy === null &&
+        storage.getItem(BACKUP_KEY) !== null
+      )
+        throw new Error('missing primary');
       this.state.library = decodeSnapshot(this.state.original);
       if (!this.exclusive) this.state.issue = 'unsupported';
     } catch {
@@ -127,6 +133,7 @@ export class LibraryStorage {
       this.state.needsRecovery = true;
       try {
         const backup = storage.getItem(BACKUP_KEY);
+        this.state.original.backup = backup;
         if (backup !== null) {
           this.state.library = decodeLibrary(backup);
           this.state.recoveredFromBackup = true;
@@ -187,6 +194,7 @@ export class LibraryStorage {
                 format: 'everdale-planner-recovery',
                 capturedAt: Date.now(),
                 ...original,
+                backup: storage.getItem(BACKUP_KEY),
               }),
             );
           }
