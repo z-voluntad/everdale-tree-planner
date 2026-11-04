@@ -1,70 +1,85 @@
-# Everdale Planner
+# Everdale Tree Planner
 
-[English](README.en.md) · [资料出处](docs/SOURCES.md) · [架构与扩展](docs/ARCHITECTURE.md)
+**规划村庄里的每一团树，记录从布局到长成的进度。**
 
-面向个人村庄的社区布局工具。React + TypeScript + Vite，无后端、账户或云存储。
+一个为 Everdale 玩家制作的社区工具：从参考方案开始，在 70 × 70 地图上调整树群，并逐团记录生长状态。打开浏览器即可使用，无需注册。
 
-![方案二与树群编辑界面](docs/preview.png)
+**[在线体验 →](https://z-voluntad.github.io/everdale-tree-planner/)** · [English](README.en.md) · [资料出处](docs/SOURCES.md) · [架构与开发](docs/ARCHITECTURE.md) · [反馈问题](https://github.com/z-voluntad/everdale-tree-planner/issues)
 
-- 固定 70×70 村落和 7 个资源点，入口朝下；方案不能修改固定点。
-- 拖放 5×5 / 4×4 树群，保留已有 2×2；网格吸附、碰撞检查、复制、删除、撤销与重做。
-- 顶部区分现成方案和自定义方案；修改模板自动创建副本，草稿自动保存在当前浏览器。
-- 方案一与方案二由参考图提取；方案二内圈不计作树。
-- 中英文切换，JSON 导入/导出、旧编辑器 JSON 兼容、SVG 导出。
-- 可关闭的蓝色建造参考线；已移除粉色刷新边界。
-- 生长进度模式：点击整团树切换“待长成 / 已长成”，已长成显示深绿色与勾号，统计完成比例、剩余树群和参考树量。
-- 进度随方案自动保存，支持撤销/重做、JSON 备份和 SVG 导出；记录进度时不会移动或删除树群。
+[![检查与部署](https://github.com/z-voluntad/everdale-tree-planner/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/z-voluntad/everdale-tree-planner/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-4c7558.svg)](LICENSE)
 
-## 记录自己的进度
+![布局编辑界面：方案二与固定资源点](docs/preview.png)
 
-1. 在“现成方案”里选择布局，默认进入“记录进度”。
-2. 点击已经长成的树群，标记为深绿色；再次点击可取消。首次修改模板会自动建立自定义副本，之后从“自定义方案”继续。
-3. 需要移动、添加或删除树群时，切换到“编辑布局”。新添加、复制出的树群默认待长成；移动已有树群保留状态。
-4. 从“文件与设置 → 导出 JSON”备份当前布局和进度，换设备后导入。SVG 导出也会保留深色和勾号。
+## 可以做什么
 
-目前按**整团树**记录进度；不是游戏自动检测。每位访客的进度独立保存在自己的浏览器，无需登录，也不会自动跨设备同步。旧 JSON 没有进度字段时，全部视为待长成。
+| 功能             | 说明                                                                                                                       |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| 从现成方案开始   | 内置两套参考布局；首次修改自动生成个人副本，原模板保持不变。                                                               |
+| 调整树群布局     | 添加 5 × 5 / 4 × 4 树群，移动、复制或删除已有树群；自动吸附网格，检查越界、重叠与固定资源点冲突。保留模板中的 2 × 2 树群。 |
+| 记录生长进度     | 点击整团树标记“已长成”，通过颜色和勾号辨认状态，查看完成比例及剩余数量。                                                   |
+| 保存与分享       | 自定义方案自动保存在当前浏览器；支持撤销/重做、JSON 备份与导入、SVG 图片导出。                                             |
+| 按自己的习惯使用 | 简体中文 / English 切换，地图平移与缩放，可开关网格和建造参考线。                                                          |
 
-## 本地运行
+## 三步开始
 
-需要 Node.js 24（最低 22.12）和 pnpm 11.25.0。
+1. **选择方案**：打开[网站](https://z-voluntad.github.io/everdale-tree-planner/)，在“现成方案”里选一套布局；也可以从“自定义方案”新建空白方案。
+2. **记录或编辑**：在“记录进度”模式点击树群，切换待长成 / 已长成；需要移动或添加树群时，切换“编辑布局”。方案名可以在自定义副本中修改。
+3. **备份成果**：从“文件与设置”导出 JSON，保存布局和进度；换设备后导入。想分享布局图片时，导出 SVG。
+
+移动已有树群会保留生长状态，新添加或复制出的树群从“待长成”开始。进度按**整团树**计算，由你手动记录。
+
+### 常用操作
+
+| 操作         | 方法                                                                   |
+| ------------ | ---------------------------------------------------------------------- |
+| 标记生长状态 | 记录进度模式下点击树群；也可用 Tab 聚焦后按 Enter / 空格。             |
+| 添加树群     | 编辑布局模式下，从左侧拖入地图，或点击尺寸后在地图放置。               |
+| 精确移动     | 选中树群后输入 X / Y，或按方向键；Shift + 方向键移动 5 格。            |
+| 删除树群     | 编辑布局模式下选中树群，按 Delete / Backspace。                        |
+| 撤销 / 重做  | Ctrl / ⌘ + Z，Ctrl / ⌘ + Shift + Z。撤销历史仅保留到本次页面会话结束。 |
+| 查看全图     | 使用地图上方的缩放与适应视图按钮。                                     |
+
+## 数据与边界
+
+- **保存位置**：方案存在当前浏览器的 localStorage，应用不上传个人方案，也不提供账号或云端同步。清理站点数据会移除存档；请定期导出 JSON。不同浏览器、设备、localhost 和网站域名之间需手动导出/导入。
+- **固定地图**：地图为 70 × 70，入口朝下，7 个资源点位置固定。导入文件不能替换这些资源点。
+- **参考而非游戏检测**：蓝色建造线来自静态配置推导，未逐格实机验证；碰撞检查针对地图边缘、固定资源点和其他树群，不把蓝线作为硬性放置边界。
+- **树量是估算值**：按 5 × 5 / 4 × 4 / 2 × 2 分别折算为 7 / 5 / 3 棵。方案一为 450，方案二为 451；项目保留原图几何，不为凑数修改树群。方案二内圈色块仅作参考，不计作树。
+
+提取方法、已知不确定性和第三方资料说明见 [SOURCES.md](docs/SOURCES.md)。本工具不连接游戏，也不会自动读取游戏进度。
+
+## 本地开发
+
+技术栈：**React 19 · TypeScript · Vite · SVG · Vitest**。纯静态前端，无后端服务或环境变量要求。
+
+推荐使用 **Node.js 24**，包管理器固定为 **pnpm 11.25.0**（见 `package.json`）。
 
 ```sh
-pnpm install
+git clone https://github.com/z-voluntad/everdale-tree-planner.git
+cd everdale-tree-planner
+pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-开发服务器默认地址由 Vite 输出，通常为 http://127.0.0.1:5173。此项目使用模块构建，不能直接双击 index.html。
+打开终端显示的本地地址，通常为 `http://127.0.0.1:5173`。请通过开发服务器访问，不能直接双击 `index.html`。
 
 ```sh
-pnpm check   # TypeScript + 单元测试
-pnpm build   # 静态生产文件输出到 dist/
-pnpm preview # 本地预览生产构建
+pnpm check    # TypeScript 检查与单元测试
+pnpm build    # 生产构建，输出 dist/
+pnpm preview  # 预览生产构建
 ```
 
-## 上传 GitHub 与建站
+网站由 **GitHub Pages** 托管：默认分支 `master` 的推送通过检查和构建后自动发布；PR 和其他分支只执行检查与构建。部署配置、目录职责、数据协议和扩展方式见 [架构与开发文档](docs/ARCHITECTURE.md)。
 
-将本目录上传为仓库。不要上传 node_modules/、dist/、.env 或个人存档；这些已在 .gitignore 中排除。保留 pnpm-lock.yaml。
+## 参与改进
 
-**GitHub Pages：**
+欢迎通过 [Issues](https://github.com/z-voluntad/everdale-tree-planner/issues) 报告问题或提出建议。报告布局问题时，请附操作步骤、浏览器信息，以及可公开的截图或 JSON 示例。
 
-1. 打开仓库 **Settings → Pages → Build and deployment → Source**，选择 **GitHub Actions**。
-2. 向 `master` 或 `main` 推送代码会自动运行 **Deploy GitHub Pages**；也可以在 Actions 中手动运行。工作流先检查类型、运行测试并构建，再发布 `dist/`。
-3. 等待工作流成功，在 Pages 设置或部署任务中打开返回的网址。当前仓库的默认地址应为 `https://z-voluntad.github.io/everdale-tree-planner/`；只有部署成功后才可访问。
+提交代码前运行 `pnpm check` 和 `pnpm build`；界面文案需要同时更新中英文。新增参考方案请记录来源、坐标约定和使用许可，具体步骤见[扩展指南](docs/ARCHITECTURE.md#扩展指南)。
 
-Pull request 和其他分支只运行检查，不部署。Vite 使用相对 base，兼容仓库子路径。
+## 许可与声明
 
-GitHub Free 仅支持公开仓库的 Pages；私有仓库需要支持 Pages 的付费套餐。公开网站与公开源代码是不同的设置，本项目的工作流不会改变仓库可见性。如果 Pages 页面提示升级，需决定公开仓库源代码或使用支持私有仓库 Pages 的套餐。参见 [GitHub Pages 官方说明](https://docs.github.com/en/pages/getting-started-with-github-pages)。
+应用源代码采用 [MIT License](LICENSE)。游戏名称、相关商标、游戏数据和第三方参考图仍归各自权利人所有，不因本仓库许可证而被重新授权。
 
-**其他静态站点：** 安装命令 `pnpm install --frozen-lockfile`，构建命令 `pnpm build`，发布目录 `dist`，Node.js 24。无需环境变量或服务器端路由重写。
-
-## 数据与保存
-
-所有用户方案只存在当前浏览器的 localStorage。`file://`、localhost、GitHub Pages 和自定义域名之间不共享浏览器存储。迁移时从旧页面导出 JSON，再通过新站“文件与设置 → 导入 JSON”导入。
-
-固定点始终使用项目内的规范数据；导入文件不能替换它们。JSON 支持最多 500 团树、4900 个规划格，拒绝越界、重叠和无效尺寸。导入不会修改原模板。
-
-蓝线来自静态配置推导，不是逐格游戏验证。方案二识别 8 团 5×5、79 团 4×4，按 7/5 换算为 451，项目保留原图结果，不强改成 450。详细依据见 [SOURCES.md](docs/SOURCES.md)。
-
-## 许可
-
-项目源代码使用 [MIT License](LICENSE)。游戏名称、提取的数据、第三方图片和相关商标不因该许可证而被重新授权。项目未包含 APK、游戏美术或用户提供的原始参考图片。与 Supercell 无隶属关系。
+这是独立的社区项目，与 Supercell 无隶属关系，也未获其认可。仓库不包含 APK、游戏美术或原始参考图片；资料来源与不确定性保留在[来源文档](docs/SOURCES.md)中。

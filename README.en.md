@@ -1,45 +1,91 @@
-# Everdale Planner
+# Everdale Tree Planner
 
-![Layout two in the village editor](docs/preview.png)
+**Plan your groves. Track them as they grow.**
 
-[简体中文](README.md) · [Sources and provenance](docs/SOURCES.md) · [Architecture](docs/ARCHITECTURE.md)
+A community tool for Everdale players: start with a reference layout, arrange groves on a 70 × 70 village map, and track growth one group at a time. Runs in your browser without an account.
 
-An independent, browser-local village planner built with React, TypeScript and Vite.
+**[Open the planner →](https://z-voluntad.github.io/everdale-tree-planner/)** · [简体中文](README.md) · [Sources](docs/SOURCES.md) · [Architecture & development (中文)](docs/ARCHITECTURE.md) · [Report an issue](https://github.com/z-voluntad/everdale-tree-planner/issues)
 
-Drag 5×5 and 4×4 groves, move existing groups, undo changes and save multiple custom layouts. Two reference templates are included. All layouts share the same seven fixed resource locations on a 70×70 map with the entrance at the bottom. Editing a template creates a custom copy. English and Simplified Chinese are supported throughout the interface.
+[![Check and deploy](https://github.com/z-voluntad/everdale-tree-planner/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/z-voluntad/everdale-tree-planner/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-4c7558.svg)](LICENSE)
 
-## Track progress
+![Layout editor showing the second template and fixed resources](docs/preview.png)
 
-Use **Track growth** to click whole groves and mark them grown. Grown groves turn dark green with a check mark. Click again to unmark, or undo/redo. The first template edit creates a personal copy. The summary shows completed and remaining groups plus estimated tree counts.
+## Features
 
-Use **Edit layout** to move, add or delete groups. Moving preserves growth; new or duplicated groups start pending. Progress stays in this browser, without an account or automatic device sync. Export/import JSON to transfer layouts and progress. SVG exports retain growth colors and check marks. Old saves start pending. Keyboard users can Tab to a grove and press Space or Enter to toggle growth.
+| Feature           | What it does                                                                                                                                                                                      |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Reference layouts | Two built-in templates. Your first edit creates a personal copy, leaving the template intact.                                                                                                     |
+| Grove editing     | Add 5 × 5 and 4 × 4 groups; move, duplicate or delete existing ones. Grid snapping and collision checks protect map edges, fixed resources and other groves. Existing 2 × 2 groups are preserved. |
+| Growth tracking   | Mark whole groves as grown. Dark green fills and check marks show their state, alongside completed and remaining totals.                                                                          |
+| Save and share    | Browser-local autosave, undo/redo, portable JSON backups and SVG image exports.                                                                                                                   |
+| Map controls      | English and Simplified Chinese, pan and zoom, optional grid and build-area reference boundary.                                                                                                    |
 
-## Development
+## Get started
 
-Use Node.js 24 (minimum 22.12) and pnpm 11.25.0.
+1. **Choose a layout.** Open [the planner](https://z-voluntad.github.io/everdale-tree-planner/) and pick a preset, or create a blank custom layout.
+2. **Track or edit.** In **Track growth**, click a grove to mark it grown or pending. Switch to **Edit layout** to move or add groves. You can rename your custom copy.
+3. **Back up your work.** Export JSON from the file menu to preserve both layout and growth, then import it on another device. Export SVG to share an image.
 
-```sh
-pnpm install
-pnpm dev
-pnpm check
-pnpm build
-pnpm preview
-```
+Moving a grove preserves its growth state. New and duplicated groves start pending. Progress is recorded manually for **whole groves**, not individual trees.
 
-The production output is `dist/`. Open the Vite server URL, not index.html directly.
+### Controls
 
-## Deploy
-
-Upload this directory as a GitHub repository, keeping the lockfile and excluding node_modules, dist, environment files and private saves. For GitHub Pages, select **GitHub Actions** under **Settings → Pages**. Pushes to `master` or `main` automatically run **Deploy GitHub Pages**; manual runs are also supported. Pull requests and other branches run checks only. Relative asset paths support repository subpaths. Types, tests and the production build must pass before deployment.
-
-GitHub Free supports Pages from public repositories; private repositories require an eligible paid plan. The workflow does not change repository visibility. See [GitHub Pages documentation](https://docs.github.com/en/pages/getting-started-with-github-pages). After deployment, the default URL for this repository is `https://z-voluntad.github.io/everdale-tree-planner/`.
-
-For other static hosts: Node.js 24, install `pnpm install --frozen-lockfile`, build `pnpm build`, publish `dist`. No backend, secrets or rewrite rules are needed.
+| Action             | Control                                                                            |
+| ------------------ | ---------------------------------------------------------------------------------- |
+| Toggle growth      | Click a grove in Track growth, or Tab to it and press Enter / Space.               |
+| Add a grove        | In Edit layout, drag a size onto the map, or click a size and then a map position. |
+| Move precisely     | Select a grove and enter X / Y, or use arrow keys. Hold Shift to move 5 tiles.     |
+| Delete a grove     | Select it in Edit layout and press Delete / Backspace.                             |
+| Undo / redo        | Ctrl / ⌘ + Z and Ctrl / ⌘ + Shift + Z. History lasts for the current page session. |
+| View the whole map | Use the zoom and fit buttons above the map.                                        |
 
 ## Data and limitations
 
-Custom layouts are saved in this browser only. Storage does not transfer between file URLs, localhost or deployed domains; export and import JSON to migrate. Legacy 70×70 JSON is supported, while fixed resource locations always come from the canonical project data.
+- **Local saves:** layouts stay in this browser's localStorage. The app does not upload them or provide cloud sync. Clearing site data removes saves; export JSON regularly. Different devices, browsers, localhost and deployed domains require manual export/import.
+- **Fixed map:** the map is 70 × 70, with the entrance at the bottom and seven fixed resource locations. Imports cannot replace those locations.
+- **Reference boundary:** the blue line is derived from static configuration and has not been verified tile by tile in game. Placement checks enforce map edges, resources and grove collisions; the blue line is advisory.
+- **Estimated trees:** 5 × 5 / 4 × 4 / 2 × 2 groups count as 7 / 5 / 3 trees. Layout one estimates 450; layout two estimates 451. The reference geometry is preserved. Layout two's interior colored areas are a visual reference, not trees.
 
-The blue boundary is derived from game configuration and has not been tested tile by tile in game. Layout two contains 87 detected outer groups; the assumed 7/5 weighting gives 451, not 450. Its interior colored areas are not trees. See [the provenance document](docs/SOURCES.md).
+See [Sources](docs/SOURCES.md) for extraction methods, uncertainties and attribution. The planner does not connect to the game or detect live growth.
 
-Source code is MIT licensed. Game data, names, trademarks and third-party diagrams retain their respective rights. No game artwork, APKs or original reference images are bundled. This project is not affiliated with or endorsed by Supercell.
+## Local development
+
+Built with **React 19 · TypeScript · Vite · SVG · Vitest**. A static frontend with no backend or environment variables to configure.
+
+Use **Node.js 24** and **pnpm 11.25.0**, as pinned in `package.json`.
+
+```sh
+git clone https://github.com/z-voluntad/everdale-tree-planner.git
+cd everdale-tree-planner
+pnpm install --frozen-lockfile
+pnpm dev
+```
+
+Open the URL printed by Vite, usually `http://127.0.0.1:5173`. Use the server URL rather than opening `index.html` directly.
+
+```sh
+pnpm check    # TypeScript and unit tests
+pnpm build    # Production output in dist/
+pnpm preview  # Preview the production build
+```
+
+## Deployment
+
+The live site uses **GitHub Pages**. Pushes to the default branch (`master`) are checked, built and deployed by a single [workflow](.github/workflows/ci.yml). Pull requests and other branches only check and build. You can also run the workflow manually on the default branch.
+
+For your own fork, enable **Settings → Pages → Build and deployment → Source → GitHub Actions**, then run the workflow. GitHub Free supports Pages for public repositories; private repositories require an eligible plan. See [GitHub's documentation](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages).
+
+Other static hosts can install with `pnpm install --frozen-lockfile`, build with `pnpm build` and publish `dist/` using Node.js 24. Relative asset paths support repository subpaths. No server-side routing rules are required.
+
+## Contributing
+
+[Issues](https://github.com/z-voluntad/everdale-tree-planner/issues) and pull requests are welcome. Include reproduction steps, browser details and a shareable screenshot or JSON example when reporting a layout problem.
+
+Run `pnpm check` and `pnpm build` before submitting code. Keep UI messages in both languages. New templates should document their source, coordinate convention and permission to use the reference. The [architecture guide](docs/ARCHITECTURE.md) describes module responsibilities and extension points.
+
+## License and attribution
+
+Application source code is licensed under [MIT](LICENSE). Game names, trademarks, game data and third-party diagrams retain their respective rights and are not relicensed by this repository.
+
+This is an independent community project, not affiliated with or endorsed by Supercell. No APKs, game artwork or original reference images are bundled. Provenance and uncertainties are documented in [Sources](docs/SOURCES.md).
