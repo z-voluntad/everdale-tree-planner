@@ -34,6 +34,8 @@ import { GroveSymbol } from './components/GroveSymbol';
 import { MiniMap } from './components/MiniMap';
 import { SourcesDialog } from './components/SourcesDialog';
 import { ProgressPanel } from './components/ProgressPanel';
+import { StorageNotice } from './components/StorageNotice';
+import { exportLibrary } from './services/storage';
 import { downloadPlan, downloadText, planSvg } from './services/export';
 export default function App() {
   const { t, locale, setLocale } = useI18n();
@@ -141,6 +143,12 @@ export default function App() {
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   });
+  const backupLibrary = () =>
+    downloadText(
+      JSON.stringify(exportLibrary(planner.library), null, 2),
+      'application/json',
+      'everdale-all-layouts.json',
+    );
   const toggle = (p: typeof panel) => setPanel(panel === p ? null : p);
   return (
     <div className="app-shell">
@@ -180,8 +188,8 @@ export default function App() {
         </nav>
         <div className="header-actions">
           <span className={`save-status ${planner.storageError ? 'error' : ''}`}>
-            {planner.storageError ? '!' : planner.saved ? <Check size={12} /> : null}
-            {planner.storageError ? '' : t(planner.saved ? 'saved' : 'saving')}
+            {planner.storageError ? null : planner.saved ? <Check size={12} /> : null}
+            {t(planner.storageError ? 'savePaused' : planner.saved ? 'saved' : 'saving')}
           </span>
           <button className="button save-button" aria-label={t('save')} onClick={planner.save}>
             <Save size={14} />
@@ -318,6 +326,10 @@ export default function App() {
                   <ArrowDownToLine size={16} />
                   {t('exportSvg')}
                 </button>
+                <button className="menu-action" onClick={backupLibrary}>
+                  <ArrowDownToLine size={16} />
+                  {t('exportLibrary')}
+                </button>
                 <hr />
                 <label className="check-row">
                   <input
@@ -361,6 +373,34 @@ export default function App() {
           </section>
         </>
       )}
+      <StorageNotice
+        state={planner.storageState}
+        onBackup={backupLibrary}
+        onOriginal={() =>
+          downloadText(
+            JSON.stringify(
+              { format: 'everdale-planner-recovery', ...planner.storageState.original },
+              null,
+              2,
+            ),
+            'application/json',
+            'everdale-original-save.json',
+          )
+        }
+        onReload={() => {
+          if (window.confirm(t('confirmReload'))) {
+            planner.reloadStorage();
+            setSelected(null);
+            setToast(null);
+          }
+        }}
+        onRecover={() => {
+          if (window.confirm(t('confirmRecovery'))) void planner.recoverStorage();
+        }}
+        onRetry={() => {
+          void planner.save();
+        }}
+      />
       <main className="workspace">
         <aside className={`sidebar sidebar-${mode}`}>
           <ProgressPanel groups={current.groups} />
@@ -620,9 +660,9 @@ export default function App() {
           />
         </section>
       </main>
-      {(toast || planner.storageError) && (
-        <div className={`toast ${planner.storageError ? 'error' : ''}`} role="status">
-          {t(planner.storageError ? 'saveError' : toast!)}
+      {toast && (
+        <div className="toast" role="status">
+          {t(toast)}
         </div>
       )}
       <input
@@ -635,7 +675,7 @@ export default function App() {
           e.target.value = '';
           if (!f) return;
           try {
-            if (f.size > 2_000_000) throw new Error('large');
+            if (f.size > 10_000_000) throw new Error('large');
             planner.importFile(await f.text());
             setSelected(null);
             setPanel(null);

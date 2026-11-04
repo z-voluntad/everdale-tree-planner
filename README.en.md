@@ -49,6 +49,16 @@ Moving a grove preserves its growth state. New and duplicated groves start pendi
 
 See [Sources](docs/SOURCES.md) for extraction methods, uncertainties and attribution. The planner does not connect to the game or detect live growth.
 
+### If saving is interrupted
+
+A persistent notice pauses saving when a save is damaged or another page has changed it. Your in-memory edits remain available. **Files & settings → Export all layouts** backs up every custom layout; **Import JSON** restores them as additional copies.
+
+- **Damaged save:** the original data stays untouched. If a previous valid backup exists, it is loaded for viewing. Download the original save if needed, check the current layouts, then choose **Resume saving**. Recovery archives the original first.
+- **Another page updated the save:** export all layouts before choosing **Load latest save**. Reimport your backup to keep both versions.
+- **Save failure:** keep the page open, export a backup, check browser storage permissions and space, then retry. Wait for **Saved** before closing the page.
+
+Use an up-to-date browser over HTTPS. Browsers without safe cross-page saving show a notice and still allow editing and exporting. Browser-local backups are also removed when site data is cleared, so download JSON regularly.
+
 ## Local development
 
 Built with **React 19 · TypeScript · Vite · SVG · Vitest**. A static frontend with no backend or environment variables to configure.

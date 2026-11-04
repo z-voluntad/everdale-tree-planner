@@ -1,21 +1,27 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { FIXED_NODES, PRESETS, PRESET_META } from '../data';
 import { parsePlan } from '../domain/layout';
-import { loadLibrary, STORAGE_KEY } from '../services/storage';
+import {
+  decodeLibrary,
+  LibraryStorage,
+  LIBRARY_FORMAT,
+  STORAGE_KEY,
+  LEGACY_KEY,
+} from '../services/storage';
 import { useI18n } from '../i18n';
 import type { Library, Plan, TreeGroup } from '../domain/types';
 export function usePlanner() {
   const { t } = useI18n();
-  const [storageError, setStorageError] = useState(false);
-  const [library, setLibrary] = useState<Library>(() => {
-    try {
-      return loadLibrary(localStorage);
-    } catch {
-      return { version: 1, activeId: 'preset-one', plans: [] };
-    }
-  });
-  const [saved, setSaved] = useState(true);
-  const [, tick] = useState(0);
+  const [storage] = useState(
+    () =>
+      new LibraryStorage(
+        () => window.localStorage,
+        navigator.locks ? (task) => navigator.locks.request(STORAGE_KEY, task) : undefined,
+      ),
+  );
+  const [storageState, setStorageState] = useState(storage.status);
+  const [library, setLibrary] = useState(storageState.library);
+  const latest = useRef(library);
   const histories = useRef(new Map<string, { past: Plan[]; future: Plan[] }>());
   const active =
     library.plans.find((p) => p.id === library.activeId) ??
@@ -24,39 +30,70 @@ export function usePlanner() {
   const isPreset = active.id.startsWith('preset-');
   const name = (p: Plan) =>
     PRESET_META[p.id] ? t(PRESET_META[p.id].title) : p.name || t('myPlan');
-  const save = () => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(library));
-      setSaved(true);
-      setStorageError(false);
-    } catch {
-      setStorageError(true);
+  const saved = !storageState.issue && storageState.library === library;
+  function updateLibrary(update: (previous: Library) => Library) {
+    latest.current = update(latest.current);
+    setLibrary(latest.current);
+  }
+  const save = useCallback(async () => {
+    if (latest.current === storage.status.library && !storage.status.issue) {
+      setStorageState(storage.inspect());
+      return;
     }
-  };
+    await storage.save(latest.current);
+    setStorageState(storage.status);
+  }, [storage]);
+  async function recoverStorage() {
+    await storage.save(latest.current, true);
+    setStorageState(storage.status);
+  }
+  function reloadStorage() {
+    const next = storage.reload();
+    latest.current = next.library;
+    setLibrary(next.library);
+    setStorageState(next);
+    histories.current.clear();
+  }
   useEffect(() => {
-    setSaved(false);
+    if (library === storage.status.library) return;
     const timeout = setTimeout(() => {
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(library));
-        setSaved(true);
-        setStorageError(false);
-      } catch {
-        setStorageError(true);
-      }
+      void save();
     }, 250);
     return () => clearTimeout(timeout);
-  }, [library]);
+  }, [library, save, storage]);
   useEffect(() => {
-    const onUnload = () => {
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(library));
-      } catch {
-        /* export remains available */
+    const changed = (event: StorageEvent) => {
+      if (event.key === null || event.key === STORAGE_KEY || event.key === LEGACY_KEY)
+        setStorageState(storage.inspect());
+    };
+    const inspect = () => setStorageState(storage.inspect());
+    const flush = () => {
+      void save();
+    };
+    const visibility = () => {
+      if (document.visibilityState === 'hidden') flush();
+    };
+    const beforeUnload = (event: BeforeUnloadEvent) => {
+      if (latest.current !== storage.status.library) {
+        event.preventDefault();
+        event.returnValue = '';
       }
     };
-    window.addEventListener('pagehide', onUnload);
-    return () => window.removeEventListener('pagehide', onUnload);
-  }, [library]);
+    window.addEventListener('storage', changed);
+    window.addEventListener('pageshow', inspect);
+    window.addEventListener('pagehide', flush);
+    window.addEventListener('beforeunload', beforeUnload);
+    document.addEventListener('visibilitychange', visibility);
+    inspect(); // Catch changes between the initial read and listener registration.
+    return () => {
+      storage.cancelPending();
+      window.removeEventListener('storage', changed);
+      window.removeEventListener('pageshow', inspect);
+      window.removeEventListener('pagehide', flush);
+      window.removeEventListener('beforeunload', beforeUnload);
+      document.removeEventListener('visibilitychange', visibility);
+    };
+  }, [storage, save]);
   const history = histories.current.get(active.id);
   function edit(groups: TreeGroup[]) {
     const id = isPreset ? crypto.randomUUID() : active.id;
@@ -71,7 +108,7 @@ export function usePlanner() {
     h.future = [];
     histories.current.set(id, h);
     const next = { ...base, groups, updatedAt: Date.now() };
-    setLibrary((l) => ({
+    updateLibrary((l) => ({
       ...l,
       activeId: id,
       plans: isPreset ? [...l.plans, next] : l.plans.map((p) => (p.id === id ? next : p)),
@@ -82,11 +119,10 @@ export function usePlanner() {
     if (!h?.[direction].length) return;
     const previous = h[direction].pop()!;
     h[direction === 'past' ? 'future' : 'past'].push(structuredClone(active));
-    setLibrary((l) => ({
+    updateLibrary((l) => ({
       ...l,
       plans: l.plans.map((p) => (p.id === active.id ? { ...previous, updatedAt: Date.now() } : p)),
     }));
-    tick((n) => n + 1);
   }
   function create(blank = false, supplied?: Plan) {
     const p: Plan = supplied
@@ -105,17 +141,38 @@ export function usePlanner() {
             name: `${name(active)} · ${t('copy')}`,
           };
     p.updatedAt = Date.now();
-    setLibrary((l) => ({ ...l, activeId: p.id, plans: [...l.plans, p] }));
+    updateLibrary((l) => ({ ...l, activeId: p.id, plans: [...l.plans, p] }));
     return p.id;
   }
   function importFile(raw: string) {
-    const plan = parsePlan(JSON.parse(raw), FIXED_NODES);
+    const value = JSON.parse(raw);
+    const bytes = new TextEncoder().encode(raw).length;
+    if (value?.format === LIBRARY_FORMAT) {
+      if (bytes > 10_000_000) throw new Error('large');
+      const imported = decodeLibrary(raw);
+      const plans = imported.plans.map((p) => ({
+        ...p,
+        id: crypto.randomUUID(),
+        updatedAt: Date.now(),
+      }));
+      const index = imported.plans.findIndex((p) => p.id === imported.activeId);
+      updateLibrary((l) => ({
+        ...l,
+        plans: [...l.plans, ...plans],
+        activeId: plans[index]?.id ?? plans[0]?.id ?? l.activeId,
+      }));
+      return;
+    }
+    if (value?.format !== undefined && (value.format !== 'everdale-planner' || value.version !== 1))
+      throw new Error('invalid');
+    if (bytes > 2_000_000) throw new Error('large');
+    const plan = parsePlan(value, FIXED_NODES);
     if (!plan.name) plan.name = t('unknownName');
     create(false, plan);
   }
   function rename(value: string) {
     if (!isPreset && value.trim())
-      setLibrary((l) => ({
+      updateLibrary((l) => ({
         ...l,
         plans: l.plans.map((p) =>
           p.id === active.id ? { ...p, name: value.trim().slice(0, 60), updatedAt: Date.now() } : p,
@@ -128,13 +185,17 @@ export function usePlanner() {
     plans: library.plans,
     name,
     saved,
-    storageError,
+    library,
+    storageState,
+    storageError: storageState.issue,
+    reloadStorage,
+    recoverStorage,
     save,
     edit,
     create,
     rename,
     importFile,
-    select: (id: string) => setLibrary((l) => ({ ...l, activeId: id })),
+    select: (id: string) => updateLibrary((l) => ({ ...l, activeId: id })),
     undo: () => travel('past'),
     redo: () => travel('future'),
     canUndo: !!history?.past.length,

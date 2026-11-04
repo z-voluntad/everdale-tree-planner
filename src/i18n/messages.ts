@@ -35,7 +35,25 @@ export const zh = {
   saved: '已保存',
   saving: '保存中',
   local: '方案保存在此浏览器',
-  saveError: '本地存储不可用，请导出 JSON 备份。',
+  saveError: '保存失败，原存档未被替换。请导出全部方案备份，释放浏览器存储空间后重试。',
+  savePaused: '尚未保存',
+  storageCorrupt: '本地存档无法读取，已暂停保存并保留原始内容。可导入备份，或编辑后确认恢复保存。',
+  storageRecovered: '本地存档损坏，已载入上一次有效备份供查看，保存仍暂停。原始内容未被覆盖。',
+  storageConflict:
+    '另一页面已修改或清除了存档。当前页面的改动仍在，但保存已暂停。请先导出全部方案，再载入最新存档；需要时重新导入备份。',
+  storageUnavailable:
+    '无法读取浏览器存储，已暂停保存。请先导出当前方案，允许本站使用存储后再载入存档。',
+  storageUnsupported:
+    '当前浏览器不支持安全的跨页面保存，已暂停写入。请导出全部方案，并使用新版浏览器通过 HTTPS 打开网站。',
+  exportLibrary: '导出全部方案',
+  exportOriginal: '下载原始存档',
+  resumeSaving: '恢复保存',
+  reloadStorage: '载入最新存档',
+  retrySave: '重试保存',
+  confirmRecovery:
+    '将当前页面的全部方案保存为新的本地存档。原始内容会先保留为恢复副本，失败时不会替换原存档。是否继续？',
+  confirmReload:
+    '将以最新存档替换当前页面内容，未保存的改动会丢失。请先导出全部方案备份。是否继续？',
   newPlan: '新建空白方案',
   copyPlan: '以当前布局新建',
   planName: '方案名称',
@@ -162,7 +180,28 @@ export const en: Record<MessageKey, string> = {
   saved: 'Saved',
   saving: 'Saving',
   local: 'Layouts stay in this browser',
-  saveError: 'Local storage unavailable. Export JSON to keep a backup.',
+  saveError:
+    'Saving failed; the original save was not replaced. Export all layouts, free browser storage space, then retry.',
+  savePaused: 'Not saved',
+  storageCorrupt:
+    'The local save cannot be read. Saving is paused and the original data is preserved. Import a backup or edit your layouts, then confirm recovery.',
+  storageRecovered:
+    'The local save is damaged. The previous valid backup has been loaded for viewing, with saving paused. The original data is untouched.',
+  storageConflict:
+    'Another page changed or cleared the save. Your changes remain here, but saving is paused. Export all layouts before loading the latest save; you can then reimport your backup.',
+  storageUnavailable:
+    'Browser storage could not be read. Saving is paused. Export your layouts, allow site storage, then reload the save.',
+  storageUnsupported:
+    'This browser cannot coordinate safe saves between pages. Saving is paused. Export all layouts and open the HTTPS site in an up-to-date browser.',
+  exportLibrary: 'Export all layouts',
+  exportOriginal: 'Download original save',
+  resumeSaving: 'Resume saving',
+  reloadStorage: 'Load latest save',
+  retrySave: 'Retry save',
+  confirmRecovery:
+    'Save all layouts currently shown as the new local library? The original data will be archived first. If archiving fails, the original save will not be replaced.',
+  confirmReload:
+    'Replace this page with the latest save? Unsaved changes will be lost. Export all layouts as a backup first.',
   newPlan: 'New empty layout',
   copyPlan: 'Copy current layout',
   planName: 'Layout name',

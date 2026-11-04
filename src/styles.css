@@ -1456,3 +1456,27 @@ hr {
     scroll-behavior: auto !important;
   }
 }
+
+.storage-notice {
+  flex: none;
+  max-height: 32dvh;
+  overflow: auto;
+  padding: 12px 24px;
+  background: #fff4df;
+  color: #684b24;
+  border-bottom: 1px solid #e4cfa7;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.storage-notice p {
+  margin: 0 0 8px;
+}
+.storage-notice-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.storage-notice .button {
+  background: var(--paper);
+  color: #684b24;
+}
